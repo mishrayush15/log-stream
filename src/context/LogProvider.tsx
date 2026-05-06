@@ -93,7 +93,7 @@ export default function LogProvider({ children }: { children: ReactNode }) {
   /* — connection — */
   const [connected, setConnected] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reconnectTimer = useRef<number | null>(null);
 
   /* — logs — */
   const [logs, setLogs] = useState<Log[]>([]);
@@ -120,8 +120,8 @@ export default function LogProvider({ children }: { children: ReactNode }) {
       ws.onopen = () => {
         console.log("[ws] Connected to LogStream server");
         setConnected(true);
-        if (reconnectTimer.current) {
-          clearTimeout(reconnectTimer.current as unknown as number);
+        if (reconnectTimer.current !== null) {
+          window.clearTimeout(reconnectTimer.current as unknown as number);
           reconnectTimer.current = null;
         }
       };
@@ -140,7 +140,7 @@ export default function LogProvider({ children }: { children: ReactNode }) {
         setConnected(false);
         wsRef.current = null;
         // Auto-reconnect after 3 seconds
-        reconnectTimer.current = setTimeout(connectWebSocket, 3000);
+        reconnectTimer.current = window.setTimeout(connectWebSocket, 3000) as unknown as number;
       };
 
       ws.onerror = () => {
@@ -149,7 +149,7 @@ export default function LogProvider({ children }: { children: ReactNode }) {
       };
     } catch {
       setConnected(false);
-      reconnectTimer.current = setTimeout(connectWebSocket, 3000);
+      reconnectTimer.current = window.setTimeout(connectWebSocket, 3000) as unknown as number;
     }
   }, []);
 
@@ -228,7 +228,7 @@ export default function LogProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     connectWebSocket();
     return () => {
-      if (reconnectTimer.current) clearTimeout(reconnectTimer.current as unknown as number);
+      if (reconnectTimer.current !== null) window.clearTimeout(reconnectTimer.current as unknown as number);
       wsRef.current?.close();
     };
   }, [connectWebSocket]);
