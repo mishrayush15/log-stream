@@ -93,7 +93,7 @@ export default function LogProvider({ children }: { children: ReactNode }) {
   /* — connection — */
   const [connected, setConnected] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimer = useRef<ReturnType<typeof setTimeout>>();
+  const reconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /* — logs — */
   const [logs, setLogs] = useState<Log[]>([]);
@@ -121,8 +121,8 @@ export default function LogProvider({ children }: { children: ReactNode }) {
         console.log("[ws] Connected to LogStream server");
         setConnected(true);
         if (reconnectTimer.current) {
-          clearTimeout(reconnectTimer.current);
-          reconnectTimer.current = undefined;
+          clearTimeout(reconnectTimer.current as unknown as number);
+          reconnectTimer.current = null;
         }
       };
 
@@ -228,7 +228,7 @@ export default function LogProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     connectWebSocket();
     return () => {
-      if (reconnectTimer.current) clearTimeout(reconnectTimer.current);
+      if (reconnectTimer.current) clearTimeout(reconnectTimer.current as unknown as number);
       wsRef.current?.close();
     };
   }, [connectWebSocket]);
