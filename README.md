@@ -193,3 +193,59 @@ npm run build
 - Backend can't access Docker: ensure Docker Desktop / daemon is running and you have permissions.
 - WebSocket connection failing: check CORS/proxy settings and backend port.
 - Too few logs: run `log-generator` or ensure containers produce logs that the backend can follow.
+
+## CI / CD (GitHub Actions)
+
+This repository includes two example GitHub Actions workflows to get you started with CI and automated frontend deployment:
+
+- **CI workflow**: `.github/workflows/ci.yml`
+   - Runs on pushes and PRs to `main`.
+   - Installs dependencies, runs `npm run lint`, builds the frontend (`npm run build`) and builds the server (`npm run build --prefix server`).
+   - Builds Docker images (frontend, server, log-generator when their Dockerfiles exist) and pushes them to GitHub Container Registry (`ghcr.io`) using the `GITHUB_TOKEN`.
+
+- **Frontend deploy**: `.github/workflows/deploy-frontend.yml`
+   - Runs on push to `main` and builds the Vite frontend.
+   - Deploys the `dist` output to GitHub Pages using the official Pages actions.
+
+Notes & next steps:
+
+- If you want images to be published to `ghcr.io`, the default workflow uses the built-in `GITHUB_TOKEN`. For some orgs you may need to enable package publishing permissions in repository settings or provide a personal access token with `write:packages` privileges as `GHCR_PAT` and update the workflow accordingly.
+- The Pages deploy uses the `GITHUB_TOKEN` and the Pages permissions included in the workflow; no extra secret is required for basic usage.
+- To deploy to other targets (Docker Hub, AWS, Azure, GCP, etc.) add a deploy job and configure the provider-specific secrets in the repository `Settings → Secrets`
+
+If you'd like, I can:
+
+- Commit a small `.github/` workflow tweak to push images under a different tag (for example `:latest`),
+- Add a `workflow_dispatch` manual trigger for deployments, or
+- Configure a GitHub Actions secret helper in this repo's README with exact steps for setting up GHCR / Pages permissions.
+
+## Docker Hub CI/CD (automatic image publish)
+
+I added a workflow that builds the main application image from the repository root `Dockerfile` and publishes it to Docker Hub on pushes to `main`:
+
+- Workflow: `.github/workflows/dockerhub-publish.yml`
+   - Triggers: push to `main`
+   - Builds the image using the repo root `Dockerfile` and pushes two tags to Docker Hub:
+      - `docker.io/<DOCKERHUB_USERNAME>/logstream:${{ github.sha }}`
+      - `docker.io/<DOCKERHUB_USERNAME>/logstream:latest`
+
+Required repository secrets (set these in GitHub → Settings → Secrets → Actions):
+
+- `DOCKERHUB_USERNAME` — your Docker Hub username
+- `DOCKERHUB_TOKEN` — a Docker Hub access token (recommended) or your password
+
+How to create a Docker Hub token:
+
+1. Sign in to Docker Hub and go to Account Settings → Security → New Access Token.
+2. Create a token, copy it, and add it to the repo secrets as `DOCKERHUB_TOKEN`.
+
+Local test (optional): build and push the same image locally to validate credentials:
+
+```bash
+docker build -t ${DOCKERHUB_USERNAME}/logstream:local -f Dockerfile .
+docker login --username "$DOCKERHUB_USERNAME"
+docker push ${DOCKERHUB_USERNAME}/logstream:local
+```
+
+If you prefer a different image name or repository, set `DOCKERHUB_USERNAME` accordingly and change the `logstream` repository name in the workflow (file: `.github/workflows/dockerhub-publish.yml`).
+
